@@ -22,11 +22,13 @@ class InputCanvas {
     this.realmouseY = 0;
     this.tracking = false;
 
+
     element.onmousedown = (event) => {
       this.tracking = true;
     }
     element.onmouseup = (event) => {
       this.tracking = false;
+      this.resetThrottle();
     }
     element.onmousemove = (event) => {
       this.realmouseX = ( event.clientX - widthHalf );
@@ -38,6 +40,12 @@ class InputCanvas {
         this.render();
       }
     };
+  }
+
+  resetThrottle() {
+    this.realmouseY = 0;
+    this.callback && this.callback(this.mouseX, 0);
+    this.render();
   }
 
   render() {
@@ -74,7 +82,11 @@ class Car {
   }
 
   steering (d) {
-    this.socket.send(JSON.stringify({ "cmd": "steering", "value": d}));
+    this.socket.send(JSON.stringify({ "cmd": "steering", "value": d }));
+  }
+
+  throttle(d) {
+    this.socket.send(JSON.stringify({ "cmd": "throttle", "value": d }));
   }
 }
 
@@ -84,4 +96,5 @@ car.start();
 var input = new InputCanvas(document.getElementById('input'), 500, 500);
 input.onMove((x, y) => {
   car.steering(x)
+  car.throttle(y);
 });

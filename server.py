@@ -25,7 +25,6 @@ import tornado.options
 import tornado.web
 import tornado.websocket
 import os.path
-import uuid
 
 import car
 
@@ -34,6 +33,7 @@ from tornado.options import define, options
 define("port", default=8081, help="run on the given port", type=int)
 
 the_car = car.Car()
+
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -84,6 +84,8 @@ class CarSocketHandler(tornado.websocket.WebSocketHandler):
         parsed = tornado.escape.json_decode(message)
         if parsed['cmd'] == "steering":
             the_car.steering(parsed['value'])
+        if parsed['cmd'] == "throttle":
+            the_car.throttle(parsed['value'])
         CarSocketHandler.send_updates(parsed)
 
 
