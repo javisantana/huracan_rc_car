@@ -30,11 +30,20 @@ class InputCanvas {
       this.tracking = false;
       this.resetThrottle();
     }
+    function getXY(e) {
+      if (e.touches) {
+          var p = e.touches[0];
+          return [p.pageX, p.pageY];
+      } else {
+          return [e.clientX, e.clientY];
+      }
+    }
     element.onmousemove = (event) => {
-      this.realmouseX = ( event.clientX - widthHalf );
-      this.realmouseY = ( event.clientY - heightHalf );
-      this.mouseX = ( event.clientX - widthHalf ) / width;
-      this.mouseY = ( event.clientY - heightHalf ) / height;
+      var xy = getXY(event);
+      this.realmouseX = ( xy[0] - widthHalf );
+      this.realmouseY = ( xy[1] - heightHalf );
+      this.mouseX = ( xy[0] - widthHalf ) / width;
+      this.mouseY = ( xy[1] - heightHalf ) / height;
       if (this.tracking) {
         this.callback && this.callback(this.mouseX, this.mouseY);
         this.render();
@@ -93,7 +102,10 @@ class Car {
 var car = new Car();
 car.start();
 
-var input = new InputCanvas(document.getElementById('input'), 500, 500);
+var w = document.body.clientWidth;
+var h = document.body.clientHeight;
+
+var input = new InputCanvas(document.getElementById('input'), w, h);
 input.onMove((x, y) => {
   car.steering(x)
   car.throttle(y);
