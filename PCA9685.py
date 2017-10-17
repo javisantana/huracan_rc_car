@@ -128,11 +128,16 @@ class PWM(object):
         '''Write data to I2C with self.address'''
         if self._DEBUG:
             print(self._DEBUG_INFO, 'Writing value %2X to %2X' % (value, reg))
-        try:
-            self.bus.write_byte_data(self.address, reg, value)
-        except Exception as i:
-            print(i)
-            self._check_i2c()
+        tries = 3
+        while tries:
+            try:
+                self.bus.write_byte_data(self.address, reg, value)
+                return
+            except Exception as i:
+                tries -= 1
+                if tries == 0:
+                    print(i)
+                    self._check_i2c()
 
     def _read_byte_data(self, reg):
         '''Read data from I2C with self.address'''

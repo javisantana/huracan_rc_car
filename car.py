@@ -34,17 +34,31 @@ else:
             GPIO.setmode(GPIO.BOARD)
             for pin in pins:
                 GPIO.setup(pin, GPIO.OUT)
+            self._forward()
+
+        def _forward(self):
             GPIO.output(Motor0_A, GPIO.LOW)
             GPIO.output(Motor0_B, GPIO.HIGH)
             GPIO.output(Motor1_A, GPIO.LOW)
             GPIO.output(Motor1_B, GPIO.HIGH)
+
+        def _backward(self):
+            GPIO.output(Motor0_A, GPIO.HIGH)
+            GPIO.output(Motor0_B, GPIO.LOW)
+            GPIO.output(Motor1_A, GPIO.HIGH)
+            GPIO.output(Motor1_B, GPIO.LOW)
+
 
         def steering(self, v):
             angle = int(420 + 150 * v)
             self.pwm.write(0, 0, angle)
 
         def throttle(self, v):
-            speed = v * 40
+            if v < 0:
+              self._backward()
+            else:
+              self._forward()
+            speed = int(abs(v) * 8000)
             self.pwm.write(EN_M0, 0, speed)
             self.pwm.write(EN_M1, 0, speed)
 
