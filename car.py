@@ -79,7 +79,7 @@ else:
                 while self.recording:
                     ret, im = self.cap.read()
                     if ret:
-                        cv2.imwrite(folder + '/%02d.png' % frame, im)
+                        cv2.imwrite(folder + '/%02d.jpg' % frame, im)
                         frame += 1
                         time.sleep(interval)
                     else:
