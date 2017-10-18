@@ -23,10 +23,10 @@ class InputCanvas {
     this.tracking = false;
 
 
-    el.ontouchstart = element.onmousedown = (event) => {
+    element.ontouchstart = element.onmousedown = (event) => {
       this.tracking = true;
     }
-    el.ontouchend = element.onmouseup = (event) => {
+    element.ontouchend = element.onmouseup = (event) => {
       this.tracking = false;
       this.resetThrottle();
     }
@@ -38,7 +38,7 @@ class InputCanvas {
           return [e.clientX, e.clientY];
       }
     }
-    el.ontouchmove = element.onmousemove = (event) => {
+    element.ontouchmove = element.onmousemove = (event) => {
       var xy = getXY(event);
       this.realmouseX = ( xy[0] - widthHalf );
       this.realmouseY = ( xy[1] - heightHalf );
