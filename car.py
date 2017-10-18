@@ -3,6 +3,7 @@
 try:
     import RPi.GPIO as GPIO
     import PCA9685 as servo
+    import cv2
 except ImportError as e:
     print("error importing hardware control library, running on the car?")
     print(e)
@@ -35,6 +36,8 @@ else:
             for pin in pins:
                 GPIO.setup(pin, GPIO.OUT)
             self._forward()
+            self.cap = cv2.VideoCapture(0)
+            self.recording = False
 
         def _forward(self):
             GPIO.output(Motor0_A, GPIO.LOW)
@@ -65,3 +68,29 @@ else:
         def stop(self):
             for pin in pins:
                 GPIO.output(pin, GPIO.LOW)
+
+        
+        def start_record_images(self, folder, interval):
+            import threading
+            import time
+            self.recording = True
+            def _record():
+                frame = 0
+                while self.recording:
+                    ret, im = self.cap.read()
+                    if ret:
+                        cv2.imwrite(folder + '/%02d.png' % frame, im)
+                        frame += 1
+                        time.sleep(interval)
+                    else:
+                        print("error capturing image")
+            self.record_image_thread = threading.Thread(target=_record)
+            self.record_image_thread.start()
+
+        def stop_record_images(self):
+            self.recording = False
+            self.record_image_thread.join()
+
+        def image(self):
+            ret, im = cap.read()
+            return bytearray(im.flatten().tolist())

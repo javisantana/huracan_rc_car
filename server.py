@@ -25,14 +25,19 @@ import tornado.options
 import tornado.web
 import tornado.websocket
 import os.path
+import os
 
+from time import gmtime, strftime
 import car
 
 from tornado.options import define, options
 
 define("port", default=8081, help="run on the given port", type=int)
+define("image_interval", default="0.5", help="interval for image recoding")
 
-the_car = car.Car()
+folder = "records/" + strftime("record_%a_%d_%b_%Y-%H_%M_%S", gmtime())
+os.mkdir(folder)
+the_car = None 
 
 
 class Application(tornado.web.Application):
@@ -90,10 +95,17 @@ class CarSocketHandler(tornado.websocket.WebSocketHandler):
 
 
 def main():
+    global the_car
     tornado.options.parse_command_line()
     app = Application()
     app.listen(options.port)
-    tornado.ioloop.IOLoop.current().start()
+    the_car = car.Car()
+    print("recoding images with interval %f" % float(options.image_interval))
+    the_car.start_record_images(folder, float(options.image_interval))
+    try:
+        tornado.ioloop.IOLoop.current().start()
+    except KeyboardInterrupt as e:
+        the_car.stop_record_images()
 
 
 if __name__ == "__main__":
