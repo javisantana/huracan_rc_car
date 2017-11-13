@@ -95,6 +95,7 @@ class CarSocketHandler(tornado.websocket.WebSocketHandler):
 
 
 def main():
+    import base64, json
     global the_car
     tornado.options.parse_command_line()
     app = Application()
@@ -102,10 +103,25 @@ def main():
     the_car = car.Car()
     print("recoding images with interval %f" % float(options.image_interval))
     the_car.start_record_images(folder, float(options.image_interval))
+    import threading
+    import time
+    stop = False
+    def _send_image():
+        images = the_car.image()
+        for x in images:
+            img_base64 = base64.b64encode(x)
+            if stop:
+                return
+            CarSocketHandler.send_updates(json.dumps({ 'cmd': 'camera_sensor', 'value': img_base64 }))
+            time.sleep(0.5)
+    send_image_thread = threading.Thread(target=_send_image)
+    send_image_thread.start()
     try:
         tornado.ioloop.IOLoop.current().start()
     except KeyboardInterrupt as e:
+        stop = True
         the_car.stop_record_images()
+        send_image_thread.join(1.0)
 
 
 if __name__ == "__main__":

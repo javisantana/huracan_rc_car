@@ -5,9 +5,11 @@ try:
     import PCA9685 as servo
     import cv2
 except ImportError as e:
+    import os
     print("error importing hardware control library, running on the car?")
     print(e)
 
+    # this is a dummy implementation for the car
     class Car:
         def steering(self, v):
             angle = 450 + 50 * v
@@ -15,6 +17,25 @@ except ImportError as e:
 
         def throttle(self, v):
             print("car: throttle %f" % v)
+
+        def start_record_images(self, folder, interval):
+            print("start recording images")
+
+        def stop_record_images(self):
+            print("finish recording images")
+
+        def image(self): 
+            dir = 'records/record_Wed_18_Oct_2017-18_23_26'
+            images = os.listdir(dir)
+            while 1:
+                for im in images:
+                    if '.jpg' in im:
+                        d = open(dir + "/" + im)
+                        data = d.read()
+                        d.close()
+                        yield data
+
+            # im = ndimage.imread('../records/record_Wed_18_Oct_2017-18_23_26/20.jpg', mode='L')
 
 else:
 
@@ -69,7 +90,6 @@ else:
             for pin in pins:
                 GPIO.output(pin, GPIO.LOW)
 
-        
         def start_record_images(self, folder, interval):
             import threading
             import time

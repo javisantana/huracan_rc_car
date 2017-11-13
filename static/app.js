@@ -80,8 +80,12 @@ class Car {
   start () {
       var url = "ws://" + location.host + "/car";
       this.socket = new WebSocket(url);
-      this.socket.onmessage = function(event) {
+      this.socket.onmessage = (event) => {
           console.log("event recieved", event);
+          var ev = JSON.parse(event.data)
+          if (ev.cmd === 'camera_sensor') {
+            this.onCameraSensor && this.onCameraSensor (ev.value)
+          }
       }
       this.checker();
   }
@@ -101,12 +105,23 @@ class Car {
 
 var car = new Car();
 car.start();
+const CAMERA_SIZE = 200;
+
 
 var w = document.body.clientWidth;
-var h = document.body.clientHeight;
+var h = document.body.clientHeight - 200;
 
 var input = new InputCanvas(document.getElementById('input'), w, h);
 input.onMove((x, y) => {
   car.steering(x)
   car.throttle(y);
 });
+
+var camera_image = document.createElement('img')
+var camera = document.getElementById('camera');
+camera.appendChild(camera_image)
+camera_image.height = CAMERA_SIZE
+
+car.onCameraSensor = (img) => {
+  camera_image.src = "data:image/jpg;base64," + img
+}
