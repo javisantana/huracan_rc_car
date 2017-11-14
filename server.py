@@ -34,10 +34,9 @@ from tornado.options import define, options
 
 define("port", default=8081, help="run on the given port", type=int)
 define("image_interval", default="0.5", help="interval for image recoding")
+define("replay", default='', help="folder to replay")
 
-folder = "records/" + strftime("record_%a_%d_%b_%Y-%H_%M_%S", gmtime())
-os.mkdir(folder)
-the_car = None 
+the_car = None
 
 
 class Application(tornado.web.Application):
@@ -102,7 +101,12 @@ def main():
     app.listen(options.port)
 
     # initialize the car
-    folder = 'records/record_Wed_18_Oct_2017-18_23_26'
+    if options.replay:
+        folder = options.replay
+        print("replaying from %s" % options.replay)
+    else:
+        folder = "records/" + strftime("record_%a_%d_%b_%Y-%H_%M_%S", gmtime())
+        os.mkdir(folder)
     the_car = car.Car()
     print("recoding images with interval %f" % float(options.image_interval))
     the_car.camera.start(folder, float(options.image_interval))
