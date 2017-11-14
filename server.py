@@ -106,14 +106,16 @@ def main():
         print("replaying from %s" % options.replay)
     else:
         folder = "records/" + strftime("record_%a_%d_%b_%Y-%H_%M_%S", gmtime())
+        print("recording to  %s" % folder)
         os.mkdir(folder)
     the_car = car.Car()
     print("recoding images with interval %f" % float(options.image_interval))
     the_car.camera.start(folder, float(options.image_interval))
     def _send_image():
         image = the_car.camera.get_last_image()
-        img_base64 = base64.b64encode(image)
-        CarSocketHandler.send_updates(json.dumps({ 'cmd': 'camera_sensor', 'value': img_base64 }))
+        if image:
+            img_base64 = base64.b64encode(image)
+            CarSocketHandler.send_updates(json.dumps({ 'cmd': 'camera_sensor', 'value': img_base64 }))
     tornado.ioloop.PeriodicCallback(_send_image, 500).start()
     try:
         tornado.ioloop.IOLoop.current().start()

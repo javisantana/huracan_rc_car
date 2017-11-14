@@ -4,6 +4,7 @@ try:
     import RPi.GPIO as GPIO
     import PCA9685 as servo
     import cv2
+    import numpy as np
 except ImportError as e:
     import os
     print("error importing hardware control library, running on the car?")
@@ -121,7 +122,12 @@ class Camera:
 
     def get_last_image(self):
         """ returns the lastest captured image. None if no image was already captures """
-        return self.last_image
+        im = None
+        if self.last_image != None:
+            print self.last_image.size
+            ret, im = cv2.imencode('.jpg', self.last_image)
+            im = np.getbuffer(im)
+        return im
         #return bytearray(im.flatten().tolist())
 
 class FakeCamera:
