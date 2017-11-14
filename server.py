@@ -100,28 +100,21 @@ def main():
     tornado.options.parse_command_line()
     app = Application()
     app.listen(options.port)
+
+    # initialize the car
+    folder = 'records/record_Wed_18_Oct_2017-18_23_26'
     the_car = car.Car()
     print("recoding images with interval %f" % float(options.image_interval))
-    the_car.start_record_images(folder, float(options.image_interval))
-    import threading
-    import time
-    stop = False
+    the_car.camera.start(folder, float(options.image_interval))
     def _send_image():
-        images = the_car.image()
-        for x in images:
-            img_base64 = base64.b64encode(x)
-            if stop:
-                return
-            CarSocketHandler.send_updates(json.dumps({ 'cmd': 'camera_sensor', 'value': img_base64 }))
-            time.sleep(0.5)
-    send_image_thread = threading.Thread(target=_send_image)
-    send_image_thread.start()
+        image = the_car.camera.get_last_image()
+        img_base64 = base64.b64encode(image)
+        CarSocketHandler.send_updates(json.dumps({ 'cmd': 'camera_sensor', 'value': img_base64 }))
+    tornado.ioloop.PeriodicCallback(_send_image, 500).start()
     try:
         tornado.ioloop.IOLoop.current().start()
     except KeyboardInterrupt as e:
-        stop = True
-        the_car.stop_record_images()
-        send_image_thread.join(1.0)
+        the_car.camera.stop()
 
 
 if __name__ == "__main__":

@@ -11,6 +11,9 @@ except ImportError as e:
 
     # this is a dummy implementation for the car
     class Car:
+        def __init__(self):
+            self.camera = FakeCamera()
+
         def steering(self, v):
             angle = 450 + 50 * v
             print("car: steering, angle %f" % angle)
@@ -24,18 +27,7 @@ except ImportError as e:
         def stop_record_images(self):
             print("finish recording images")
 
-        def image(self): 
-            dir = 'records/record_Wed_18_Oct_2017-18_23_26'
-            images = os.listdir(dir)
-            while 1:
-                for im in images:
-                    if '.jpg' in im:
-                        d = open(dir + "/" + im)
-                        data = d.read()
-                        d.close()
-                        yield data
-
-            # im = ndimage.imread('../records/record_Wed_18_Oct_2017-18_23_26/20.jpg', mode='L')
+        # im = ndimage.imread('../records/record_Wed_18_Oct_2017-18_23_26/20.jpg', mode='L')
 
 else:
 
@@ -57,8 +49,7 @@ else:
             for pin in pins:
                 GPIO.setup(pin, GPIO.OUT)
             self._forward()
-            self.cap = cv2.VideoCapture(0)
-            self.recording = False
+            self.camera = Camera()
 
         def _forward(self):
             GPIO.output(Motor0_A, GPIO.LOW)
@@ -90,27 +81,81 @@ else:
             for pin in pins:
                 GPIO.output(pin, GPIO.LOW)
 
-        def start_record_images(self, folder, interval):
-            import threading
-            import time
-            self.recording = True
-            def _record():
-                frame = 0
-                while self.recording:
-                    ret, im = self.cap.read()
-                    if ret:
-                        cv2.imwrite(folder + '/%02d.jpg' % frame, im)
-                        frame += 1
-                        time.sleep(interval)
-                    else:
-                        print("error capturing image")
-            self.record_image_thread = threading.Thread(target=_record)
-            self.record_image_thread.start()
 
-        def stop_record_images(self):
-            self.recording = False
-            self.record_image_thread.join()
+#
+# Camera module provides with the basics to get the image from the camera and
+# record it in the disk (so later can be reproduced)
+# It uses opencv to capute data from the camera so a thread loop reads the images
+#
+import threading
+import time
+class Camera:
+    def __init__(self, capture_interval=0.5):
+        self.recording = False
+        self.cap = cv2.VideoCapture(0)
+        self.capture_interval = capture_interval
+        self.last_image = None
 
-        def image(self):
-            ret, im = cap.read()
-            return bytearray(im.flatten().tolist())
+    def start(self, folder=None, capture_interval=0.5):
+        """ starts recording images, if `folder` is set saves images in that folder """
+        self.recording = True
+        self.capture_interval = capture_interval
+        def _record():
+            frame = 0
+            while self.recording:
+                ret, im = self.cap.read()
+                if ret and folder:
+                    cv2.imwrite(folder + '/%04d.jpg' % frame, im)
+                    frame += 1
+                    time.sleep(self.capture_interval)
+                else:
+                    print("error capturing image")
+                self.last_image = im
+        self.record_image_thread = threading.Thread(target=_record)
+        self.record_image_thread.start()
+
+    def stop(self):
+        """stops the recording"""
+        self.recording = False
+        self.record_image_thread.join()
+
+    def get_last_image(self):
+        """ returns the lastest captured image. None if no image was already captures """
+        return self.last_image
+        #return bytearray(im.flatten().tolist())
+
+class FakeCamera:
+    def __init__(self, capture_interval=0.5):
+        self.recording = False
+        self.capture_interval = capture_interval
+        self.last_image = None
+        # create a generator to read images
+
+    def start(self, folder=None, capture_interval=0.5):
+        self.folder = folder
+        def gen():
+            images = os.listdir(self.folder)
+            while 1:
+                for im in images:
+                    if '.jpg' in im:
+                        d = open(self.folder + "/" + im)
+                        data = d.read()
+                        d.close()
+                        yield data
+        self.images = gen()
+        self.recording = True
+        self.capture_interval = capture_interval
+        def _record():
+            while self.recording:
+                self.last_image = self.images.next()
+                time.sleep(self.capture_interval)
+        self.record_image_thread = threading.Thread(target=_record)
+        self.record_image_thread.start()
+
+    def stop(self):
+        self.recording = False
+        self.record_image_thread.join()
+
+    def get_last_image(self):
+        return self.last_image
+        #return bytearray(im.flatten().tolist())
