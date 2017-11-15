@@ -123,5 +123,5 @@ camera.appendChild(camera_image)
 camera_image.height = CAMERA_SIZE
 
 car.onCameraSensor = (img) => {
-  camera_image.src = "data:image/jpg;base64," + img
+  camera_image.src = "data:image/png;base64," + img
 }

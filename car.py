@@ -5,6 +5,10 @@ try:
     import PCA9685 as servo
     import cv2
     import numpy as np
+    import matplotlib
+    from StringIO import StringIO
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
 except ImportError as e:
     import os
     print("error importing hardware control library, running on the car?")
@@ -90,6 +94,8 @@ else:
 #
 import threading
 import time
+from sensor_camera import extract_lines
+from scipy import ndimage
 class Camera:
     def __init__(self, capture_interval=0.5):
         self.recording = False
@@ -105,13 +111,23 @@ class Camera:
             frame = 0
             while self.recording:
                 ret, im = self.cap.read()
+                im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+                im = ndimage.zoom(im, 0.1)
+                t0 = time.time()
+                extract_lines(im, plt)
+                t1 = time.time()
+                print ("processing time %f" % (t1 - t0))
                 if ret and folder:
                     cv2.imwrite(folder + '/%04d.jpg' % frame, im)
                     frame += 1
                     time.sleep(self.capture_interval)
                 else:
                     print("error capturing image")
-                self.last_image = im
+
+                output = StringIO()
+                plt.savefig(output)
+                #encoded_string = base64.b64encode(output.getvalue())
+                self.last_image = output.getvalue() #im
         self.record_image_thread = threading.Thread(target=_record)
         self.record_image_thread.start()
 
@@ -124,9 +140,9 @@ class Camera:
         """ returns the lastest captured image. None if no image was already captures """
         im = None
         if self.last_image != None:
-            print self.last_image.size
-            ret, im = cv2.imencode('.jpg', self.last_image)
-            im = np.getbuffer(im)
+            #ret, im = cv2.imencode('.jpg', self.last_image)
+            #im = np.getbuffer(im)
+            im = self.last_image
         return im
         #return bytearray(im.flatten().tolist())
 

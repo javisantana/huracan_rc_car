@@ -5,13 +5,11 @@
 import numpy as np
 from sklearn.cluster import DBSCAN
 from scipy.signal import argrelextrema
+import time
 
 def im_histogram(im):
     """ calculate histogram for an 8 bit image, returns a 256 numpy array """
-    p = im.flatten()
-    hist = np.zeros(256)
-    for x in p:
-        hist[int(x)] += 1
+    hist, edges = np.histogram(im, bins=np.arange(256))
     return hist
 
 def calculate_colors(im, lpf_size=10, lpf_passes=2, plot=None):
@@ -20,17 +18,26 @@ def calculate_colors(im, lpf_size=10, lpf_passes=2, plot=None):
     Then the image is quantified using only those colors
     """
 
+    t0 = time.time()
     hist = im_histogram(im)
+    t1 = time.time()
+    print ("histogram time %f" % (t1 - t0))
 
+    t0 = time.time()
     # low pass filter so local peak algorithm works better
     w = np.hanning(lpf_size)
     for x in range(lpf_passes):
         hist = np.convolve(w/w.sum(), hist)
 
     h = np.column_stack((np.linspace(0, hist.max(), hist.size), hist))
+    t1 = time.time()
+    print ("lpf time %f" % (t1 - t0))
 
     # calculate local peaks
+    t0 = time.time()
     maxs = argrelextrema(h[:, 1], np.greater, order=10)[0]
+    t1 = time.time()
+    print ("local peaks time %f" % (t1 - t0))
     if plot:
         plot.figure(figsize=(13,7))
         plot.subplot(121)
@@ -48,17 +55,23 @@ def calculate_colors(im, lpf_size=10, lpf_passes=2, plot=None):
                 m = abs(v - x)
         return idx
 
+    t0 = time.time()
     # create the lookup table
     lookup = np.vectorize(mm)(range(hist.size))
     # then create a quantified version of the image
     paletted = np.vectorize(lambda x: lookup[x])(im)
     if plot:
         plot.imshow(paletted)
+    t1 = time.time()
+    print ("vectorize time %f" % (t1 - t0))
 
     # calcualte pixels sums
+    t0 = time.time()
     sums = np.zeros(maxs.size)
     for i, x in enumerate(lookup):
         sums[x] += hist[i]
+    t1 = time.time()
+    print ("pixels sums time %f" % (t1 - t0))
 
     # sort peaks by the number of colors (likely higher frequencies can be discarded)
     a = np.column_stack((range(0, maxs.size), maxs , hist[maxs], sums, sums/paletted.size))
@@ -66,7 +79,7 @@ def calculate_colors(im, lpf_size=10, lpf_passes=2, plot=None):
 
     return maximums, paletted
 
-def extract_lines_from_image(image, color_index, percent_discard=0.2, plot=None):
+def extract_lines_from_image(image, color_index, percent_discard=0.1, plot=None):
     """given an image and the color index to use calculate lines
     """
     x, y = np.where(image == color_index)
@@ -74,8 +87,12 @@ def extract_lines_from_image(image, color_index, percent_discard=0.2, plot=None)
     # if the number of points is a important part of the image, discard (likely background)
     if X.size == 0 or X.shape[0] > image.size * percent_discard:
         return []
+    print ("dbscan data size %d " % X.shape[0])
     try:
+        t0 = time.time()
         db = DBSCAN(eps=5, min_samples=10).fit(X)
+        t1 = time.time()
+        print ("   db scan time %f" % (t1 - t0))
     except ValueError:
         print(X)
     labels = db.labels_
@@ -91,6 +108,7 @@ def extract_lines_from_image(image, color_index, percent_discard=0.2, plot=None)
     # with the clusters look for the polynomial that fits better (well, it's a LR)
     pol = []
     errors = []
+    t0 = time.time()
     for x in coords:
       try:
           pfd = np.polyfit(x[:,0], x[:, 1], 1)
@@ -106,6 +124,8 @@ def extract_lines_from_image(image, color_index, percent_discard=0.2, plot=None)
             pol.append((x, pfd, err, segment, weight))
       except ValueError:
           print(x)
+      t1 = time.time()
+      print ("   polynomial fit %f" % (t1 - t0))
 
 
     if plot:
@@ -125,16 +145,21 @@ def extract_lines(im, plot=None):
         ...
     ]
     """
+    t0 = time.time()
     maximums, paletted = calculate_colors(im)
+    t1 = time.time()
+    print ("calculate colors time %f" % (t1 - t0))
+    #ax = None
+    ax = plot
+    ax.figure()
     for i, x in enumerate(maximums[:,0]):
-        ax = None
-        if plot:
-            fig, ax = plot.subplots()
+        #if plot and not ax:
+        #    fig, ax = plot.subplots()
+        if ax:
+            ax.imshow(im)
+            ax.autoscale(False)
+        t0 = time.time()
         pols = extract_lines_from_image(paletted, x, plot=ax)
-        if plot:
-            for x in pols:
-                print(x[3:])
-                ax.imshow(im)
-                ax.autoscale(False)
-                plot.show()
+        t1 = time.time()
+        print ("extract lines from image time %f" % (t1 - t0))
 
