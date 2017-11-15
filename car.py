@@ -96,6 +96,9 @@ import threading
 import time
 from sensor_camera import extract_lines
 from scipy import ndimage
+
+DEBUG = True
+
 class Camera:
     def __init__(self, capture_interval=0.5):
         self.recording = False
@@ -112,9 +115,9 @@ class Camera:
             while self.recording:
                 ret, im = self.cap.read()
                 im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-                im = ndimage.zoom(im, 0.1)
+                im = ndimage.zoom(im, 0.2)
                 t0 = time.time()
-                extract_lines(im, plt)
+                extract_lines(im, plt if DEBUG else None)
                 t1 = time.time()
                 print ("processing time %f" % (t1 - t0))
                 if ret and folder:
@@ -124,10 +127,13 @@ class Camera:
                 else:
                     print("error capturing image")
 
-                output = StringIO()
-                plt.savefig(output)
-                #encoded_string = base64.b64encode(output.getvalue())
-                self.last_image = output.getvalue() #im
+                if DEBUG:
+                    output = StringIO()
+                    plt.savefig(output)
+                    #encoded_string = base64.b64encode(output.getvalue())
+                    self.last_image = output.getvalue() #im 
+                else:
+                    self.last_image = im
         self.record_image_thread = threading.Thread(target=_record)
         self.record_image_thread.start()
 
@@ -140,9 +146,11 @@ class Camera:
         """ returns the lastest captured image. None if no image was already captures """
         im = None
         if self.last_image != None:
-            #ret, im = cv2.imencode('.jpg', self.last_image)
-            #im = np.getbuffer(im)
-            im = self.last_image
+            if DEBUG:
+                im = self.last_image
+            else:
+                ret, im = cv2.imencode('.jpg', self.last_image)
+                im = np.getbuffer(im)
         return im
         #return bytearray(im.flatten().tolist())
 

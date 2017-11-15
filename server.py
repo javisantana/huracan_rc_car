@@ -116,7 +116,7 @@ def main():
         if image:
             img_base64 = base64.b64encode(image)
             CarSocketHandler.send_updates(json.dumps({ 'cmd': 'camera_sensor', 'value': img_base64 }))
-    tornado.ioloop.PeriodicCallback(_send_image, 500).start()
+    tornado.ioloop.PeriodicCallback(_send_image, 100).start()
     try:
         tornado.ioloop.IOLoop.current().start()
     except KeyboardInterrupt as e:

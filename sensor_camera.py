@@ -151,7 +151,6 @@ def extract_lines(im, plot=None):
     print ("calculate colors time %f" % (t1 - t0))
     #ax = None
     ax = plot
-    ax.figure()
     for i, x in enumerate(maximums[:,0]):
         #if plot and not ax:
         #    fig, ax = plot.subplots()
