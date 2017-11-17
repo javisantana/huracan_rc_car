@@ -71,9 +71,10 @@ else:
         def on_camera_input(self, direction):
             # really simple control law
             K = 0.3
-            angle = -direction[0] + 0.5
+            angle = direction[0] - 0.5
             new_angle = self.current_angle
             new_angle += K*(angle  - self.current_angle)
+            print("angle direction %f %f" %(direction[0], direction[1]))
             print ("angle/new angle/diff: %f %f %f" % (
                 angle,
                 new_angle,

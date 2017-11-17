@@ -169,8 +169,8 @@ def extract_lines(im, plot=None):
             # the following operations with this segments don't drive me crazy
             # also normalize by the image size so next calcs can be done without the needing to know the bounds
             lines.append(np.array([
-                [p[3][1]/im.shape[1], p[3][0]/im.shape[0]],
-                [p[3][3]/im.shape[1], p[3][2]/im.shape[0]]
+                [p[3][1]/final_image.shape[1], p[3][0]/final_image.shape[0]],
+                [p[3][3]/final_image.shape[1], p[3][2]/final_image.shape[0]]
             ]))
         t1 = time.time()
         print ("extract lines from image time %f" % (t1 - t0))
@@ -200,7 +200,8 @@ def calculate_direction(lines):
         line_centroid = 0.5 * (x[1] + x[0])
         print("line %f %f -> %f %f" % (x[0][0], x[0][1], x[1][0], x[1][1]))
         print("line centroid %f %f" % (line_centroid[0], line_centroid[1]))
-        distance_weigth = 1.0 - 10**(-3*line_centroid[1])
+        #distance_weigth = 1.0 - 10**(-3*line_centroid[1])
+        distance_weigth = 1.0
         length_weigth = length/total_length
         centroid += line_centroid * distance_weigth * length_weigth
     return centroid
