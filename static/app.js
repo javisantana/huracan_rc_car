@@ -75,6 +75,7 @@ class Car {
 
   constructor () {
     this.socket = null;
+    this.auto = false;
   }
 
   start () {
@@ -101,6 +102,11 @@ class Car {
   throttle(d) {
     this.socket.send(JSON.stringify({ "cmd": "throttle", "value": d }));
   }
+
+  toggleAuto(d) {
+    this.auto = !this.auto
+    this.socket.send(JSON.stringify({ "cmd": "selfdrive", "value": this.auto }));
+  }
 }
 
 var car = new Car();
@@ -125,3 +131,10 @@ camera_image.height = CAMERA_SIZE
 car.onCameraSensor = (img) => {
   camera_image.src = "data:image/png;base64," + img
 }
+
+var auto = document.getElementById('auto');
+auto.onclick = function(e) {
+  car.toggleAuto();
+  return false;
+}
+

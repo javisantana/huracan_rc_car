@@ -35,6 +35,7 @@ from tornado.options import define, options
 define("port", default=8081, help="run on the given port", type=int)
 define("image_interval", default="0.5", help="interval for image recoding")
 define("replay", default='', help="folder to replay")
+define("record", default=False, help="record frames to a folder", type=bool)
 
 the_car = None
 
@@ -90,6 +91,9 @@ class CarSocketHandler(tornado.websocket.WebSocketHandler):
             the_car.steering(parsed['value'])
         if parsed['cmd'] == "throttle":
             the_car.throttle(parsed['value'])
+        if parsed['cmd'] == 'selfdrive':
+            the_car.autoMode(bool(parsed['value']))
+
         CarSocketHandler.send_updates(parsed)
 
 

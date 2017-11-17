@@ -54,7 +54,7 @@ else:
             for pin in pins:
                 GPIO.setup(pin, GPIO.OUT)
             self._forward()
-            self.camera = Camera()
+            self.camera = Camera(self.on_camera_input)
 
         def _forward(self):
             GPIO.output(Motor0_A, GPIO.LOW)
@@ -68,9 +68,21 @@ else:
             GPIO.output(Motor1_A, GPIO.HIGH)
             GPIO.output(Motor1_B, GPIO.LOW)
 
+        def on_camera_input(self, direction):
+            # really simple control law
+            K = 0.1
+            angle = direction[0] - 0.5
+            new_angle += K*(self.current_angle - angle)
+            print ("angle/new angle/diff: %f %f %f" % (
+                angle,
+                new_angle,
+                self.current_angle - angle
+            ))
+            self.steering(new_angle)
 
         def steering(self, v):
             angle = int(420 + 150 * v)
+            self.current_angle = angle
             self.pwm.write(0, 0, angle)
 
         def throttle(self, v):
@@ -86,6 +98,14 @@ else:
             for pin in pins:
                 GPIO.output(pin, GPIO.LOW)
 
+        def autoMode(self, t):
+            self.autoModel = t
+            if t:
+                self.throttle(0.1)
+            else:
+                self.throttle(0)
+
+
 
 #
 # Camera module provides with the basics to get the image from the camera and
@@ -94,17 +114,18 @@ else:
 #
 import threading
 import time
-from sensor_camera import extract_lines
+from sensor_camera import extract_lines, calculate_direction
 from scipy import ndimage
 
 DEBUG = True
 
 class Camera:
-    def __init__(self, capture_interval=0.5):
+    def __init__(self, callback, capture_interval=0.5):
         self.recording = False
         self.cap = cv2.VideoCapture(0)
         self.capture_interval = capture_interval
         self.last_image = None
+        self.callback = callback
 
     def start(self, folder=None, capture_interval=0.5):
         """ starts recording images, if `folder` is set saves images in that folder """
@@ -115,10 +136,17 @@ class Camera:
             while self.recording:
                 ret, im = self.cap.read()
                 im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-                im = ndimage.zoom(im, 0.2)
+                #im = ndimage.zoom(im, 0.2)
+                # crop the image
+                im = ndimage.zoom(im[im.shape[0]//3:,:], 0.5)
                 t0 = time.time()
-                extract_lines(im, plt if DEBUG else None)
+                lines = extract_lines(im, plt if DEBUG else None)
                 t1 = time.time()
+                # get direction based on the lines
+                direction = sensor_camera.calculate_direction(lines)
+                self.callback(direction)
+                
+                # get position
                 print ("processing time %f" % (t1 - t0))
                 if ret and folder:
                     cv2.imwrite(folder + '/%04d.jpg' % frame, im)
@@ -155,10 +183,11 @@ class Camera:
         #return bytearray(im.flatten().tolist())
 
 class FakeCamera:
-    def __init__(self, capture_interval=0.5):
+    def __init__(self, callback, capture_interval=0.5):
         self.recording = False
         self.capture_interval = capture_interval
         self.last_image = None
+        self.callback = callback
         # create a generator to read images
 
     def start(self, folder=None, capture_interval=0.5):
