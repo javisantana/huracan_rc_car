@@ -77,7 +77,7 @@ class CarSocketHandler(tornado.websocket.WebSocketHandler):
 
     @classmethod
     def send_updates(cls, chat):
-        logging.info("sending message to %d waiters", len(cls.waiters))
+        #logging.info("sending message to %d waiters", len(cls.waiters))
         for waiter in cls.waiters:
             try:
                 waiter.write_message(chat)

@@ -1,4 +1,3 @@
-#
 # gets information from the camera and gives back line information
 #
 
@@ -6,6 +5,7 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 from scipy.cluster.vq import kmeans
 from scipy.signal import argrelextrema
+from scipy import ndimage
 import time
 
 def im_histogram(im):
@@ -124,12 +124,11 @@ def extract_lines_from_image(image, color_index, percent_discard=0.3, plot=None)
             err = (xx(x[:,0]) - x[:,1]).var()
             bbox = [x[:,0].min(), x[:,0].max(),x[:,1].min(), x[:,1].max()]
             # create line segment, like [x0, y0, x1, y1]
-            segment = (xx(bbox[2]), bbox[2], xx(bbox[3]), bbox[3])
+            segment = np.array((xx(bbox[2]), bbox[2], xx(bbox[3]), bbox[3]))
             pol.append((x, pfd, err, segment, weight, bbox))
       except ValueError:
           print(x)
       t1 = time.time()
-      print ("   polynomial fit %f" % (t1 - t0))
 
 
     if plot:
@@ -156,14 +155,15 @@ def extract_lines(im, plot=None):
     #ax = None
     lines = []
     ax = plot
+    final_image = ndimage.zoom(paletted, 0.3)
     for i, x in enumerate(maximums[:,0]):
         #if plot and not ax:
         #    fig, ax = plot.subplots()
         if ax:
-            ax.imshow(im)
+            ax.imshow(final_image)
             ax.autoscale(False)
         t0 = time.time()
-        pols = extract_lines_from_image(paletted, x, plot=ax)
+        pols = extract_lines_from_image(final_image, x, plot=ax)
         for p in pols:
             # the coordinate system is reversed, coordinate 0 is X and Y is 1, so reverse it so
             # the following operations with this segments don't drive me crazy
@@ -198,6 +198,8 @@ def calculate_direction(lines):
         v = x[1] - x[0]
         length = np.hypot(v[1], v[0])
         line_centroid = 0.5 * (x[1] + x[0])
+        print("line %f %f -> %f %f" % (x[0][0], x[0][1], x[1][0], x[1][1]))
+        print("line centroid %f %f" % (line_centroid[0], line_centroid[1]))
         distance_weigth = 1.0 - 10**(-3*line_centroid[1])
         length_weigth = length/total_length
         centroid += line_centroid * distance_weigth * length_weigth

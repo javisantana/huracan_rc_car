@@ -1,5 +1,3 @@
-
-
 try:
     import RPi.GPIO as GPIO
     import PCA9685 as servo
@@ -55,6 +53,8 @@ else:
                 GPIO.setup(pin, GPIO.OUT)
             self._forward()
             self.camera = Camera(self.on_camera_input)
+            # reset steerting
+            self.steering(0.0)
 
         def _forward(self):
             GPIO.output(Motor0_A, GPIO.LOW)
@@ -70,19 +70,25 @@ else:
 
         def on_camera_input(self, direction):
             # really simple control law
-            K = 0.1
-            angle = direction[0] - 0.5
-            new_angle += K*(self.current_angle - angle)
+            K = 0.3
+            angle = -direction[0] + 0.5
+            new_angle = self.current_angle
+            new_angle += K*(angle  - self.current_angle)
             print ("angle/new angle/diff: %f %f %f" % (
                 angle,
                 new_angle,
                 self.current_angle - angle
             ))
-            self.steering(new_angle)
+            #self.current_angle = angle
+            if abs(new_angle) < 1.0:
+                self.steering(new_angle)    
+            else:
+                print ("WTF")
+
 
         def steering(self, v):
+            self.current_angle = float(v)
             angle = int(420 + 150 * v)
-            self.current_angle = angle
             self.pwm.write(0, 0, angle)
 
         def throttle(self, v):
@@ -101,7 +107,7 @@ else:
         def autoMode(self, t):
             self.autoModel = t
             if t:
-                self.throttle(0.1)
+                self.throttle(-0.15)
             else:
                 self.throttle(0)
 
@@ -117,7 +123,7 @@ import time
 from sensor_camera import extract_lines, calculate_direction
 from scipy import ndimage
 
-DEBUG = True
+DEBUG = False
 
 class Camera:
     def __init__(self, callback, capture_interval=0.5):
@@ -127,31 +133,31 @@ class Camera:
         self.last_image = None
         self.callback = callback
 
-    def start(self, folder=None, capture_interval=0.5):
+    def start(self, folder=None, capture_interval=0.2):
         """ starts recording images, if `folder` is set saves images in that folder """
         self.recording = True
         self.capture_interval = capture_interval
         def _record():
             frame = 0
             while self.recording:
+                frame_time0 = time.time()
                 ret, im = self.cap.read()
                 im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
                 #im = ndimage.zoom(im, 0.2)
                 # crop the image
-                im = ndimage.zoom(im[im.shape[0]//3:,:], 0.5)
+                im = ndimage.zoom(im[im.shape[0]//3:,:], 0.3)
                 t0 = time.time()
                 lines = extract_lines(im, plt if DEBUG else None)
                 t1 = time.time()
                 # get direction based on the lines
-                direction = sensor_camera.calculate_direction(lines)
+                direction = calculate_direction(lines)
                 self.callback(direction)
                 
                 # get position
                 print ("processing time %f" % (t1 - t0))
                 if ret and folder:
-                    cv2.imwrite(folder + '/%04d.jpg' % frame, im)
+                    #cv2.imwrite(folder + '/%04d.jpg' % frame, im)
                     frame += 1
-                    time.sleep(self.capture_interval)
                 else:
                     print("error capturing image")
 
@@ -162,6 +168,8 @@ class Camera:
                     self.last_image = output.getvalue() #im 
                 else:
                     self.last_image = im
+                frame_time = time.time() - frame_time0
+                time.sleep(0.02)#max(0, self.capture_interval - frame))
         self.record_image_thread = threading.Thread(target=_record)
         self.record_image_thread.start()
 
