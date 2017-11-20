@@ -3,7 +3,7 @@
 
 import numpy as np
 from sklearn.cluster import DBSCAN
-from scipy.cluster.vq import kmeans
+from scipy.cluster.vq import kmeans, vq
 from scipy.signal import argrelextrema
 from scipy import ndimage
 import time
@@ -49,38 +49,15 @@ def calculate_colors(im, lpf_size=10, lpf_passes=2, plot=None):
         plot.bar(maxs, np.ones(maxs.size)*hist.max())
         plot.subplot(122)
 
-    # find the nearest peak color for each color based on max
-    def mm(x):
-        idx = 0
-        m = 25500
-        for i, v in enumerate(maxs):
-            if abs(v - x) < m: 
-                idx = i
-                m = abs(v - x)
-        return idx
-
     t0 = time.time()
-    # create the lookup table
-    lookup = np.vectorize(mm)(range(hist.size))
-    # then create a quantified version of the image
-    paletted = np.vectorize(lambda x: lookup[x])(im)
+    paletted = vq(im.flatten(),maxs)[0]
+    paletted.shape = im.shape
     if plot:
         plot.imshow(paletted)
     t1 = time.time()
     print ("vectorize time %f" % (t1 - t0))
 
-    # calcualte pixels sums
-    t0 = time.time()
-    sums = np.zeros(maxs.size)
-    for i, x in enumerate(lookup):
-        sums[x] += hist[i]
-    t1 = time.time()
-    print ("pixels sums time %f" % (t1 - t0))
-
-    # sort peaks by the number of colors (likely higher frequencies can be discarded)
-    a = np.column_stack((range(0, maxs.size), maxs , hist[maxs], sums, sums/paletted.size))
-    maximums = a[a[:, 3].argsort()]
-
+    maximums = np.column_stack((range(0, maxs.size), maxs , hist[maxs]))
     return maximums, paletted
 
 def extract_lines_from_image(image, color_index, percent_discard=0.3, plot=None):
@@ -155,7 +132,7 @@ def extract_lines(im, plot=None):
     #ax = None
     lines = []
     ax = plot
-    final_image = ndimage.zoom(paletted, 0.3)
+    final_image = ndimage.zoom(paletted, 0.8)
     for i, x in enumerate(maximums[:,0]):
         #if plot and not ax:
         #    fig, ax = plot.subplots()
@@ -175,6 +152,34 @@ def extract_lines(im, plot=None):
         t1 = time.time()
         print ("extract lines from image time %f" % (t1 - t0))
     return lines
+
+
+
+def extract_line_simple(im, plt=None):
+    t0 = time.time()
+    maximums, paletted = calculate_colors(im)
+    maximums = maximums[maximums[:, 2].argsort()]
+    t1 = time.time()
+    print ("calculate colors time %f" % (t1 - t0))
+    x, y = np.where(paletted == maximums[0][0])
+    pfd = np.polyfit(x, y, 1)
+
+    print ("min x %f maxx %f" % (x.min(), x.max()))
+    print ("min y %f maxy %f" % (y.min(), y.max()))
+    print (paletted.shape)
+    xx = np.poly1d(pfd)
+    # create line segment, like [x0, y0, x1, y1]
+    segment = np.array(
+        (x.min(), xx(x.min()), 
+         x.max(), xx(x.max()))
+    )
+
+    line = np.array(([segment[0]/im.shape[0], segment[1]/im.shape[1]],
+        [segment[2]/im.shape[0], segment[3]/im.shape[1]]))
+    if plt:
+        plt.plot(line[:,1] * im.shape[1], line[:,0] * im.shape[0], '-')
+    return line
+
 
 def calculate_direction(lines):
     """
