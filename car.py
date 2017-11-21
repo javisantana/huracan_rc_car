@@ -121,7 +121,7 @@ else:
 #
 import threading
 import time
-from sensor_camera import extract_lines, calculate_direction
+from sensor_camera import extract_lines, calculate_direction, extract_line_simple
 from scipy import ndimage
 
 DEBUG = False
@@ -148,7 +148,7 @@ class Camera:
                 # crop the image
                 im = ndimage.zoom(im[im.shape[0]//3:,:], 0.3)
                 t0 = time.time()
-                lines = extract_lines(im, plt if DEBUG else None)
+                lines = extract_line_simple(im, plt if DEBUG else None)
                 t1 = time.time()
                 # get direction based on the lines
                 direction = calculate_direction(lines)

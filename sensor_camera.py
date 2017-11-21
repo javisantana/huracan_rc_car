@@ -178,7 +178,7 @@ def extract_line_simple(im, plt=None):
         [segment[2]/im.shape[0], segment[3]/im.shape[1]]))
     if plt:
         plt.plot(line[:,1] * im.shape[1], line[:,0] * im.shape[0], '-')
-    return line
+    return [line]
 
 
 def calculate_direction(lines):
